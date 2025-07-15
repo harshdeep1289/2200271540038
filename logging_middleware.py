@@ -67,6 +67,8 @@ def set_logging_auth_token(token: str):
     _logging_service.set_auth_token(token)
 
 async def Log(stack: str, level: str, package: str, message: str):
+    # Truncate message to 48 characters to meet API requirements
+    message = message[:48]
 
     # Validate inputs
     valid_stacks = ["backend", "frontend"]
@@ -117,25 +119,29 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         self.logger = logging.getLogger(logger_name)
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        request_id = str(uuid.uuid4())
+        request_id = str(uuid.uuid4())[:8]  # Use only first 8 characters
         start_time = time.time()
         
+        # Truncate message to 48 characters max
+        message = f"{request.method} {request.url.path} [{request_id}]"
         await Log(
             stack="backend",
             level="info",
             package="middleware",
-            message=f"Request started: {request.method} {request.url.path} [ID: {request_id}]"
+            message=message[:48]
         )
         
         try:
             response = await call_next(request)
             process_time = time.time() - start_time
             
+            # Truncate message to 48 characters max
+            message = f"{request.method} {request.url.path} {response.status_code} {round(process_time, 3)}s [{request_id}]"
             await Log(
                 stack="backend",
                 level="info",
                 package="middleware",
-                message=f"Request completed: {request.method} {request.url.path} - Status: {response.status_code} - Time: {round(process_time, 4)}s [ID: {request_id}]"
+                message=message[:48]
             )
             
             response.headers["X-Request-ID"] = request_id
@@ -144,11 +150,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             process_time = time.time() - start_time
             
+            # Truncate message to 48 characters max
+            error_msg = str(e)[:20]  # Limit error message length
+            message = f"{request.method} {request.url.path} ERR:{error_msg} [{request_id}]"
             await Log(
                 stack="backend",
                 level="error",
                 package="middleware",
-                message=f"Request failed: {request.method} {request.url.path} - Error: {str(e)} - Time: {round(process_time, 4)}s [ID: {request_id}]"
+                message=message[:48]
             )
             
             raise

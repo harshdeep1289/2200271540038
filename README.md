@@ -135,6 +135,9 @@ Here are some example requests you can try with Postman:
 ### Duplicate Detection
 ![Duplicate Detection](images/detect_duplicates.png)
 
+### Log Creation
+![Log Creation](images/log_creation.png)
+
 ## Error Handling
 
 The service includes comprehensive error handling:
